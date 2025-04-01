@@ -38,10 +38,10 @@ router.get('/', async (req, res) => {
     });
 
     // 🔐 Перевірка HMAC (тільки для запитів із Shopify)
-    if (!isRequestFromShopify(req.query)) {
-        console.warn('[Security] Invalid HMAC signature for shop:', shop);
-        return res.status(403).json({ error: 'Invalid HMAC signature' });
-    }
+    // if (!isRequestFromShopify(req.query)) {
+    //     console.warn('[Security] Invalid HMAC signature for shop:', shop);
+    //     return res.status(403).json({ error: 'Invalid HMAC signature' });
+    // }
 
     // 🔑 Отримуємо токен
     const token = getToken(shop);
