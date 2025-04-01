@@ -1,56 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const crypto = require('crypto');
-const { getToken } = require('../utils/tokenStore');
 
 const API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-04';
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const SHOPIFY_API_TOKEN = process.env.SHOPIFY_API_TOKEN;
 
-// 🔐 Перевірка HMAC (Shopify App Proxy)
-function isRequestFromShopify(query) {
-    const { hmac, ...params } = query;
-
-    const message = Object.keys(params)
-        .sort()
-        .map((key) => `${key}=${params[key]}`)
-        .join('&');
-
-    const generated = crypto.createHmac('sha256', SHOPIFY_API_SECRET).update(message).digest('hex');
-
-    return generated === hmac;
-}
-
 router.get('/', async (req, res) => {
-    const { customerId, productId, shop } = req.query;
+    const { customerId, productId, shop, action } = req.query;
 
-    console.log('📥 FULL REQUEST');
-    console.log('Headers:', req.headers);
-    console.log('Query:', req.query);
-    console.log('Body:', req.body);
-    console.log('---------------------------');
+    const allowedShops = ['dev-paka.myshopify.com'];
 
-    // 🛡️ Перевірка обов'язкових параметрів
-    if (!shop || !customerId || !productId) {
-        return res.status(400).json({ error: 'Missing shop, customerId or productId' });
+    if (!allowedShops.includes(shop)) {
+        return res.status(403).json({ error: 'Invalid shop' });
     }
 
-    // 🔍 Лог для дебагу
-    console.log('[Incoming Wishlist request]', {
-        shop,
-        customerId,
-        productId,
-        hmac: req.query.hmac,
-    });
+    if (!req.headers.referer?.includes(shop)) {
+        return res.status(403).json({ error: 'Invalid referer' });
+    }
 
-    // 🔐 Перевірка HMAC (тільки для запитів із Shopify)
-    // if (!isRequestFromShopify(req.query)) {
-    //     console.warn('[Security] Invalid HMAC signature for shop:', shop);
-    //     return res.status(403).json({ error: 'Invalid HMAC signature' });
-    // }
+    if (!customerId || customerId === '') {
+        return res.status(403).json({ error: 'Not logged in' });
+    }
 
-    // 🔑 Отримуємо токен
+    if (!shop || !customerId || !productId || !action) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
     const token = SHOPIFY_API_TOKEN;
     if (!token) {
         console.warn('[Token] No token for shop:', shop);
@@ -58,7 +33,6 @@ router.get('/', async (req, res) => {
     }
 
     try {
-        // 🧲 Отримуємо метаполя клієнта
         const { data } = await axios.get(
             `https://${shop}/admin/api/${API_VERSION}/customers/${customerId}/metafields.json`,
             {
@@ -81,12 +55,14 @@ router.get('/', async (req, res) => {
             );
         }
 
-        // ➕➖ Додаємо або видаляємо продукт
-        const index = wishlist.indexOf(productId);
-        if (index > -1) {
-            wishlist.splice(index, 1);
-        } else {
-            wishlist.push(productId);
+        const productIdNum = Number(productId);
+
+        if (action === 'add' && !wishlist.includes(productIdNum)) {
+            wishlist.push(productIdNum);
+        }
+
+        if (action === 'remove') {
+            wishlist = wishlist.filter((id) => id !== productIdNum);
         }
 
         const value = JSON.stringify(wishlist.map((id) => `gid://shopify/Product/${id}`));
@@ -100,7 +76,6 @@ router.get('/', async (req, res) => {
             },
         };
 
-        // 📤 Записуємо нове значення
         const url = metafield
             ? `https://${shop}/admin/api/${API_VERSION}/metafields/${metafield.id}.json`
             : `https://${shop}/admin/api/${API_VERSION}/customers/${customerId}/metafields.json`;
