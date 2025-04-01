@@ -3,6 +3,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const wishlistRoute = require('./routes/wishlist');
+const wishlistGetRoute = require('./routes/wishlistGet');
 const authRoute = require('./routes/auth');
 const { initTokenStore } = require('./utils/tokenStore');
 
@@ -17,6 +18,7 @@ app.use(express.json());
 initTokenStore();
 
 app.use('/auth', authRoute);
+app.use('/wishlist-get', wishlistGetRoute);
 app.use('/wishlist-update', wishlistRoute);
 
 app.listen(PORT, () => {
@@ -24,7 +26,7 @@ app.listen(PORT, () => {
 });
 
 app.get('/', (req, res) => {
-    res.send(`<h1>✅ Wishlist App is live</h1><p>Все працює. Ти чемпіон 🔥</p>`);
+    res.send(`<h1>✅ Wishlist App is live</h1>`);
 });
 
 app.get('/status', (req, res) => {
