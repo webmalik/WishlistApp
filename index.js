@@ -22,3 +22,15 @@ app.use('/wishlist-update', wishlistRoute);
 app.listen(PORT, () => {
     console.log(`✅ Wishlist app is running on http://localhost:${PORT}`);
 });
+
+app.get('/', (req, res) => {
+    res.send(`<h1>✅ Wishlist App is live</h1><p>Все працює. Ти чемпіон 🔥</p>`);
+});
+
+app.get('/status', (req, res) => {
+    res.json({ status: '✅ OK', time: new Date().toISOString() });
+});
+
+app.get('/test', (req, res) => {
+    res.send('👋 Це тестовий маршрут. Сервіс працює!');
+});
