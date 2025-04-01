@@ -25,6 +25,12 @@ function isRequestFromShopify(query) {
 router.get('/', async (req, res) => {
     const { customerId, productId, shop } = req.query;
 
+    console.log('📥 FULL REQUEST');
+    console.log('Headers:', req.headers);
+    console.log('Query:', req.query);
+    console.log('Body:', req.body);
+    console.log('---------------------------');
+
     // 🛡️ Перевірка обов'язкових параметрів
     if (!shop || !customerId || !productId) {
         return res.status(400).json({ error: 'Missing shop, customerId or productId' });
