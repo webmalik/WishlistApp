@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
+const { saveToken } = require('../utils/tokenStore');
 
 const API_KEY = process.env.SHOPIFY_API_KEY;
 const API_SECRET = process.env.SHOPIFY_API_SECRET;
@@ -34,11 +35,11 @@ router.get('/callback', async (req, res) => {
         });
 
         const accessToken = tokenRes.data.access_token;
+        saveToken(shop, accessToken);
 
         console.log(`✅ Access token for ${shop}:`, accessToken);
 
-        // TODO: зберегти токен в базу або файл
-        res.send(`✅ App installed successfully for ${shop}. Token: ${accessToken}`);
+        res.send(`✅ App installed successfully for ${shop}`);
     } catch (error) {
         console.error('[OAuth Error]', error?.response?.data || error.message);
         res.status(500).send('Error exchanging code for token');
@@ -46,3 +47,24 @@ router.get('/callback', async (req, res) => {
 });
 
 module.exports = router;
+
+// utils/tokenStore.js
+let tokens = {};
+
+function saveToken(shop, token) {
+    tokens[shop] = token;
+}
+
+function getToken(shop) {
+    return tokens[shop];
+}
+
+function initTokenStore() {
+    tokens = {}; // optionally, load from file/db later
+}
+
+module.exports = {
+    saveToken,
+    getToken,
+    initTokenStore,
+};
