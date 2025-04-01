@@ -1,21 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const crypto = require('crypto');
 
-const SHOP = process.env.SHOPIFY_SHOP;
 const TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-04';
+const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
+
+// HMAC перевірка (App Proxy)
+function isRequestFromShopify(query) {
+    const { hmac, ...rest } = query;
+    const message = Object.keys(rest)
+        .sort()
+        .map((key) => `${key}=${rest[key]}`)
+        .join('&');
+
+    const generated = crypto.createHmac('sha256', SHOPIFY_API_SECRET).update(message).digest('hex');
+
+    return generated === hmac;
+}
 
 router.post('/', async (req, res) => {
     const { customerId, productId } = req.body;
+    const { shop } = req.query;
 
-    if (!customerId || !productId) {
-        return res.status(400).json({ error: 'Missing customerId or productId' });
+    if (!shop || !customerId || !productId) {
+        return res.status(400).json({ error: 'Missing shop, customerId or productId' });
+    }
+
+    if (!isRequestFromShopify(req.query)) {
+        return res.status(403).json({ error: 'Invalid HMAC signature' });
     }
 
     try {
-        // Отримуємо всі метаполя користувача
+        // Отримуємо поточні метаполя
         const { data } = await axios.get(
-            `https://${SHOP}/admin/api/2023-10/customers/${customerId}/metafields.json`,
+            `https://${shop}/admin/api/${API_VERSION}/customers/${customerId}/metafields.json`,
             {
                 headers: {
                     'X-Shopify-Access-Token': TOKEN,
@@ -30,17 +50,18 @@ router.post('/', async (req, res) => {
 
         let wishlist = [];
 
-        if (metafield && metafield.value) {
+        if (metafield?.value) {
             wishlist = JSON.parse(metafield.value.replace(/gid:\/\/shopify\/Product\//g, '')).map(
                 Number,
             );
         }
 
+        // Додаємо або видаляємо
         const index = wishlist.indexOf(productId);
         if (index > -1) {
-            wishlist.splice(index, 1); // видалити
+            wishlist.splice(index, 1);
         } else {
-            wishlist.push(productId); // додати
+            wishlist.push(productId);
         }
 
         const value = JSON.stringify(wishlist.map((id) => `gid://shopify/Product/${id}`));
@@ -54,13 +75,13 @@ router.post('/', async (req, res) => {
             },
         };
 
-        const url = metafield
-            ? `https://${SHOP}/admin/api/2023-10/metafields/${metafield.id}.json`
-            : `https://${SHOP}/admin/api/2023-10/customers/${customerId}/metafields.json`;
-
+        // Створення або оновлення
         const method = metafield ? 'put' : 'post';
+        const url = metafield
+            ? `https://${shop}/admin/api/${API_VERSION}/metafields/${metafield.id}.json`
+            : `https://${shop}/admin/api/${API_VERSION}/customers/${customerId}/metafields.json`;
 
-        await axios({
+        const response = await axios({
             method,
             url,
             data: payload,
@@ -70,7 +91,11 @@ router.post('/', async (req, res) => {
             },
         });
 
-        res.json({ success: true, wishlist });
+        res.json({
+            success: true,
+            wishlist,
+            metafield_id: response.data.metafield?.id || null,
+        });
     } catch (err) {
         console.error('[Wishlist error]', err?.response?.data || err.message);
         res.status(500).json({ error: 'Internal error updating wishlist' });
