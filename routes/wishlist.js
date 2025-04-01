@@ -21,9 +21,8 @@ function isRequestFromShopify(query) {
     return generated === hmac;
 }
 
-router.post('/', async (req, res) => {
-    const { customerId, productId } = req.body;
-    const { shop } = req.query;
+router.get('/', async (req, res) => {
+    const { customerId, productId, shop } = req.query;
 
     // 🛡️ Перевірка обов'язкових параметрів
     if (!shop || !customerId || !productId) {
