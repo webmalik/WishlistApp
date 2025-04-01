@@ -6,6 +6,7 @@ const { getToken } = require('../utils/tokenStore');
 
 const API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-04';
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
+const SHOPIFY_API_TOKEN = process.env.SHOPIFY_API_TOKEN;
 
 // 🔐 Перевірка HMAC (Shopify App Proxy)
 function isRequestFromShopify(query) {
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
     // }
 
     // 🔑 Отримуємо токен
-    const token = getToken(shop);
+    const token = SHOPIFY_API_TOKEN;
     if (!token) {
         console.warn('[Token] No token for shop:', shop);
         return res.status(401).json({ error: 'No access token found for this shop' });
