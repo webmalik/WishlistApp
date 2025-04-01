@@ -9,14 +9,12 @@ const API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-04';
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 
 function isRequestFromShopify(query) {
-    const { hmac, ...rest } = query;
-    const message = Object.keys(rest)
+    const { hmac, ...params } = query;
+    const message = Object.keys(params)
         .sort()
-        .map((key) => `${key}=${rest[key]}`)
+        .map((key) => `${key}=${params[key]}`)
         .join('&');
-
     const generated = crypto.createHmac('sha256', SHOPIFY_API_SECRET).update(message).digest('hex');
-
     return generated === hmac;
 }
 
@@ -27,7 +25,7 @@ router.post('/', async (req, res) => {
     if (!shop || !customerId || !productId) {
         return res.status(400).json({ error: 'Missing shop, customerId or productId' });
     }
-
+    console.log('[HMAC CHECK] query:', req.query);
     if (!isRequestFromShopify(req.query)) {
         return res.status(403).json({ error: 'Invalid HMAC signature' });
     }
