@@ -7,9 +7,10 @@ const API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-04';
 const SHOPIFY_API_TOKEN = process.env.SHOPIFY_API_TOKEN;
 
 router.get('/', async (req, res) => {
-    const { customerId, shop } = req.query;
+    const { customerId } = req.query;
 
     const allowedShops = ['dev-paka.myshopify.com'];
+    const shop = 'dev-paka.myshopify.com';
     if (!allowedShops.includes(shop)) {
         return res.status(403).json({ error: 'Invalid shop' });
     }
