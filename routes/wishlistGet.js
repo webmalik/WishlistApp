@@ -45,7 +45,8 @@ router.get('/', async (req, res) => {
                 Number,
             );
         }
-
+        console.log('[Shopify metafields]', data.metafields);
+        console.log('[Parsed wishlist]', wishlist);
         res.json({ success: true, wishlist });
     } catch (err) {
         console.error('[Wishlist GET error]', err?.response?.data || err.message);
