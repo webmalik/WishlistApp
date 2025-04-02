@@ -18,7 +18,6 @@ app.use(express.json());
 initTokenStore();
 
 app.use('/auth', authRoute);
-app.use('/wishlist-get', wishlistGetRoute);
 app.use('/wishlist-update', wishlistRoute);
 
 app.listen(PORT, () => {
